@@ -85,7 +85,7 @@ def setup_environment():
 def find_robot_port():
     """usbserial 포트를 자동으로 탐색 (macOS 및 Linux/라즈베리파이 지원)"""
     import glob
-    ports = glob.glob('/dev/cu.usbserial-*') + glob.glob('/dev/ttyUSB*') + glob.glob('/dev/ttyACM*')
+    ports = glob.glob('/dev/cu.usbserial-*') + glob.glob('/dev/ttyACM*') + glob.glob('/dev/ttyUSB*')
     if not ports:
         raise RuntimeError("❌ usbserial 포트를 찾을 수 없습니다. 로봇 케이블을 확인하세요.")
     if len(ports) > 1:
@@ -175,8 +175,14 @@ def main():
     bot = setup_robot()
     
     # 로봇 초기 위치 획득 (현재 위치를 기준으로 원을 그림)
-    current_pose = bot.get_pose()[0:4]
-    cx, cy, cz, cr = current_pose
+    for _ in range(10):
+        current_pose = bot.get_pose()
+        if len(current_pose) >= 4:
+            break
+        time.sleep(0.5)
+    else:
+        raise RuntimeError("❌ 로봇 포즈를 읽을 수 없습니다.")
+    cx, cy, cz, cr = current_pose[0:4]
     print(f"📍 현재 로봇 위치 기준점: ({cx:.2f}, {cy:.2f}, {cz:.2f})")
     
     # AI 출력물을 임시로 저장할 변수들

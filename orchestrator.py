@@ -85,8 +85,7 @@ def setup_environment():
 def find_robot_port():
     """usbserial 포트를 자동으로 탐색 (macOS 및 Linux/라즈베리파이 지원)"""
     import glob
-    # ttyACM 우선 (Dobot은 ACM으로 잡히는 경우가 많음)
-    ports = glob.glob('/dev/ttyACM*') + glob.glob('/dev/cu.usbserial-*') + glob.glob('/dev/ttyUSB*')
+    ports = glob.glob('/dev/cu.usbserial-*') + glob.glob('/dev/ttyUSB*') + glob.glob('/dev/ttyACM*')
     if not ports:
         raise RuntimeError("❌ usbserial 포트를 찾을 수 없습니다. 로봇 케이블을 확인하세요.")
     if len(ports) > 1:
@@ -105,15 +104,6 @@ def setup_robot():
     bot.stop_queue()
     bot.clear_queue()
     return bot
-
-def get_pose_with_retry(bot, retries=10, delay=1.0):
-    for i in range(retries):
-        pose = bot.get_pose()
-        if pose and len(pose) >= 4:
-            return pose[0:4]
-        print(f"  ⏳ 로봇 포즈 대기 중... ({i+1}/{retries})")
-        time.sleep(delay)
-    raise RuntimeError("❌ 로봇 포즈를 읽을 수 없습니다. 로봇 상태를 확인하세요.")
 
 # ── 2. 작업 함수들 ────────────────────────────────
 def enqueue_trajectory(bot, start_x, start_y, start_z, start_r):
@@ -181,38 +171,76 @@ def print_to_receipt(printer, index, path, analysis):
 # ── 3. 메인 오케스트레이션 루프 ─────────────────────
 def main():
     print("\n🚀 Orchestrator 시작")
+    model, printer = setup_environment()
     bot = setup_robot()
-
-    cx, cy, cz, cr = get_pose_with_retry(bot)
+    
+    # 로봇 초기 위치 획득 (현재 위치를 기준으로 원을 그림)
+    current_pose = bot.get_pose()[0:4]
+    cx, cy, cz, cr = current_pose
     print(f"📍 현재 로봇 위치 기준점: ({cx:.2f}, {cy:.2f}, {cz:.2f})")
-
-    for cycle_count in range(1, 81):
+    
+    # AI 출력물을 임시로 저장할 변수들
+    stored_analysis = None
+    stored_path = None
+    
+    cycle_count = 0
+    
+    while True:
         try:
+            cycle_count += 1
             print(f"\n" + "━" * 60)
-            print(f"🔄 [Cycle {cycle_count}/80] 시작")
+            print(f"🔄 [Cycle {cycle_count}] 시작")
             print("━" * 60)
-
+            
+            # 1. 로봇 궤적을 큐에 적재하고 움직임 시작
             bot.stop_queue()
             bot.clear_queue()
             last_idx = enqueue_trajectory(bot, cx, cy, cz, cr)
-
+            
             print("  🤖 로봇 움직임 시작")
             bot.start_queue()
-
+            
+            # 2. 로봇이 움직이기 시작한 후, 프린트 전 대기 (PRINT_START_DELAY)
+            time.sleep(PRINT_START_DELAY)
+            
+            # 3. 임시 저장된 추출값이 있다면 출력 (첫 사이클은 스킵)
+            if stored_analysis and stored_path:
+                print("  🖨️  영수증 출력 중 (로봇 작동 중)...")
+                print_to_receipt(printer, cycle_count - 1, stored_path, stored_analysis)
+                print("  ✅ 영수증 출력 완료")
+            else:
+                print("  🖨️  이전 데이터 없음 (출력 스킵 - 첫 번째 사이클)")
+                
+            # 4. 로봇 움직임이 끝날 때까지 대기
+            print("  ⏳ 로봇 움직임 정지 대기 중...")
             wait_for_robot(bot, last_idx)
             print("  🛑 로봇 움직임 정지 완료")
-
-            print("  ⏳ 5초 대기 중...")
-            time.sleep(5)
-
+            
+            # 5. 로봇 정지 후, 캡처 전 대기 (ADB_CAPTURE_DELAY)
+            print(f"  ⏳ 캡처 대기 중 ({ADB_CAPTURE_DELAY}초)...")
+            time.sleep(ADB_CAPTURE_DELAY)
+            
+            # 6. ADB를 통해 캡처
+            print("  📸 ADB 화면 캡처 중...")
+            stored_path = capture_screen(cycle_count)
+            print(f"  ✅ 캡처 완료: {os.path.basename(stored_path)}")
+            
+            # 7. 캡처 이미지 AI 분석 (이 결과는 다음 루프에서 출력됨)
+            print("  🔍 Gemini 분석 중...")
+            stored_analysis = analyze(model, stored_path)
+            
+            print("  ✅ AI 분석 완료 (임시 저장됨, 다음 사이클에 출력)")
+            
+            # 터미널에도 분석 내용 간략히 표시
+            for line in stored_analysis.strip().splitlines():
+                print(f"     {line}")
+                
         except KeyboardInterrupt:
             print("\n🛑 사용자 중단 - 오케스트레이터를 종료합니다.")
             break
         except Exception as e:
-            print(f"\n❌ 오류 발생: {e}")
-            time.sleep(2)
-
-    print("\n✅ 80회 완료")
+            print(f"\n❌ 루프 실행 중 오류 발생: {e}")
+            time.sleep(2) # 오류 시 잠시 대기 후 재시도
 
 if __name__ == "__main__":
     main()

@@ -85,7 +85,7 @@ def setup_environment():
 def find_robot_port():
     """usbserial 포트를 자동으로 탐색 (macOS 및 Linux/라즈베리파이 지원)"""
     import glob
-    ports = glob.glob('/dev/ttyACM*') + glob.glob('/dev/cu.usbserial-*') + glob.glob('/dev/ttyUSB*')
+    ports = glob.glob('/dev/cu.usbserial-*') + glob.glob('/dev/ttyUSB*') + glob.glob('/dev/ttyACM*')
     if not ports:
         raise RuntimeError("❌ usbserial 포트를 찾을 수 없습니다. 로봇 케이블을 확인하세요.")
     if len(ports) > 1:

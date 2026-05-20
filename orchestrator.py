@@ -247,7 +247,11 @@ def main():
             break
         except Exception as e:
             print(f"\n❌ 루프 실행 중 오류 발생: {e}")
-            time.sleep(2) # 오류 시 잠시 대기 후 재시도
+            time.sleep(2)
+
+        if cycle_count >= 80:
+            print("\n🔁 80 사이클 완료 - trajectory 모드로 전환합니다.")
+            os.execv(sys.executable, [sys.executable, "examples/continous_trajectory.py"])
 
 if __name__ == "__main__":
     main()

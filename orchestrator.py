@@ -6,7 +6,8 @@ import subprocess
 from datetime import datetime
 from PIL import Image
 from dotenv import load_dotenv
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 from escpos.printer import Usb
 
 # 로봇 라이브러리 경로 추가 (lib 폴더 내 interface 등을 사용하기 위함)
@@ -61,8 +62,8 @@ def setup_environment():
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
         raise RuntimeError("❌ GEMINI_API_KEY environment variable not set.")
-    genai.configure(api_key=api_key)
-    model = genai.GenerativeModel("gemini-2.5-flash-lite")
+    client = genai.Client(api_key=api_key)
+    model = client
 
     # ADB 확인
     result = subprocess.run(["adb", "devices"], capture_output=True, text=True)
@@ -149,9 +150,10 @@ def analyze(model, image_path: str) -> str:
     img = Image.open(image_path)
     # 전송 전 리사이즈 (최대 720px, 비율 유지) → 업로드 용량 대폭 감소
     img.thumbnail((720, 1280), Image.LANCZOS)
-    response = model.generate_content(
-        [ANALYSIS_PROMPT, img],
-        generation_config=genai.GenerationConfig(max_output_tokens=600, temperature=0.2)
+    response = model.models.generate_content(
+        model="gemini-2.5-flash-lite-preview-06-17",
+        contents=[ANALYSIS_PROMPT, img],
+        config=types.GenerateContentConfig(max_output_tokens=600, temperature=0.2)
     )
     return response.text
 

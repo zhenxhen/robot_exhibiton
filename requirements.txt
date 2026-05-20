@@ -1,6 +1,6 @@
 pillow
 python-dotenv
-google-generativeai
+google-genai
 python-escpos
 pyserial
 pyusb

@@ -99,7 +99,7 @@ parsers = {
     240: [None, None, None, None],
     241: [None, None, None, None],
     242: [None, None, None, None],
-    243: [None, None, None, lambda x: list(struct.pack('<L' * 2, *x))],
+    243: [None, None, None, lambda x: list(struct.pack('<LL', *x))],
     244: [None, None, None, None],
     245: [None, None, None, None],
     246: [lambda x: struct.unpack('<Q', bytearray(x))[0], None, None, None]

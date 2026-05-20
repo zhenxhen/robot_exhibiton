@@ -6,7 +6,7 @@ import math
 
 from lib.interface import Interface
 
-bot = Interface('/dev/tty.SLAB_USBtoUART')
+bot = Interface('/dev/cu.usbserial-120')
 
 print('Bot status:', 'connected' if bot.connected() else 'not connected')
 
@@ -15,17 +15,63 @@ print('Params:', params)
 
 [start_x, start_y, start_z, start_r] = bot.get_pose()[0:4]
 
-bot.set_continous_trajectory_real_time_params(20, 100, 10)
+# 가속도와 속도 한계치를 높여 전체적인 속도 제한을 풉니다.
+bot.set_continous_trajectory_real_time_params(50, 150, 10)
+# 시작 위치
+cx = start_x
+cy = start_y
+cz = start_z
 
-# Draw about half an arch as a single path
+# 원 그리기 세팅
+radius = 70
+steps = 40
+import time
+
 bot.stop_queue()
-steps = 12
-scale = 75
-for i in range(steps + 1):
-    x = math.cos((math.pi / steps) * i)
-    y = math.sin((math.pi / steps) * i)
+bot.clear_queue()
 
-    # Absolute movement
-    bot.set_continous_trajectory_command(1, start_x, start_y + y * scale, start_z + x * scale, start_r)
+# 대각선 방향을 설정합니다.
+angle_xy = math.pi / 2
 
+# 시작점으로 천천히 이동 (대각선 원의 시작점, theta=0)
+start_x_circle = cx + radius * math.cos(0) * math.cos(angle_xy)
+start_y_circle = cy + radius * math.cos(0) * math.sin(angle_xy)
+start_z_circle = cz + radius * math.sin(0)
+bot.set_continous_trajectory_command(1, start_x_circle, start_y_circle, start_z_circle, start_r)
 bot.start_queue()
+time.sleep(1)
+
+print('Drawing continuous diagonal circle...')
+cycle_count = 0
+while True:
+    cycle_count += 1
+    print(f'Circle count: {cycle_count}')
+    
+    last_index = 0
+    for i in range(1, steps + 1):
+        # theta에 마이너스를 붙여서 회전 방향을 반대로(반시계 방향) 바꿉니다.
+        theta = -2 * math.pi * i / steps
+        
+        # X, Y가 동시에 변하면서 대각선 방향을 만들고, Z가 위아래 높이를 만듭니다.
+        x = cx + radius * math.cos(theta) * math.cos(angle_xy)
+        y = cy + radius * math.cos(theta) * math.sin(angle_xy)
+        z = cz + radius * math.sin(theta)
+        
+        # 5번째 파라미터는 속도(velocity)입니다. 그리는 속도를 높이기 위해 150으로 설정합니다.
+        res = bot.set_continous_trajectory_command(1, x, y, z, 150)
+        if res is not None:
+            last_index = res[0] if isinstance(res, (list, tuple)) else res
+            
+    # 한 사이클(좌표들)을 모두 큐에 넣은 후, 마지막으로 대기(wait) 명령을 하나 더 추가합니다.
+    # 로봇이 큐에 쌓인 명령(한 사이클)을 모두 수행할 때까지 파이썬 스크립트 대기
+    while True:
+        curr = bot.get_current_queue_index()
+        if curr is not None:
+            curr_val = curr[0] if isinstance(curr, (list, tuple)) else curr
+            # 현재 큐 인덱스가 마지막 궤적 인덱스와 같아지거나 커지면 사실상 사이클 완료
+            if curr_val >= last_index:
+                break
+        time.sleep(0.1)
+        
+    print('Cycle complete. Resting for 1 seconds...')
+    time.sleep(0)

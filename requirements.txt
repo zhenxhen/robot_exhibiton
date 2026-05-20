@@ -1,0 +1,6 @@
+pillow
+python-dotenv
+google-generativeai
+python-escpos
+pyserial
+pyusb

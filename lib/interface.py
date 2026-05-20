@@ -14,8 +14,11 @@ class Interface:
             baudrate=115200,
             parity=serial.PARITY_NONE,
             stopbits=serial.STOPBITS_ONE,
-            bytesize=serial.EIGHTBITS
+            bytesize=serial.EIGHTBITS,
+            timeout=3
         )
+        import time
+        time.sleep(2)  # Wait for the controller's bootloader to finish resetting
 
     def send(self, message):
         self.lock.acquire()
@@ -23,6 +26,8 @@ class Interface:
         self.serial.flush()
         response = Message.read(self.serial)
         self.lock.release()
+        if response is None:
+            return []
         return response.params
 
     def connected(self):

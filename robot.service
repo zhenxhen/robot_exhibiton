@@ -1,0 +1,13 @@
+[Unit]
+Description=Robot Orchestrator
+After=network.target
+
+[Service]
+User=eugene
+WorkingDirectory=/home/eugene/robot
+ExecStart=/home/eugene/robot/venv/bin/python3 orchestrator.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

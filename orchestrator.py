@@ -85,7 +85,8 @@ def setup_environment():
 def find_robot_port():
     """usbserial 포트를 자동으로 탐색 (macOS 및 Linux/라즈베리파이 지원)"""
     import glob
-    ports = glob.glob('/dev/cu.usbserial-*') + glob.glob('/dev/ttyUSB*') + glob.glob('/dev/ttyACM*')
+    # ttyACM 우선 (Dobot은 ACM으로 잡히는 경우가 많음)
+    ports = glob.glob('/dev/ttyACM*') + glob.glob('/dev/cu.usbserial-*') + glob.glob('/dev/ttyUSB*')
     if not ports:
         raise RuntimeError("❌ usbserial 포트를 찾을 수 없습니다. 로봇 케이블을 확인하세요.")
     if len(ports) > 1:
@@ -104,6 +105,15 @@ def setup_robot():
     bot.stop_queue()
     bot.clear_queue()
     return bot
+
+def get_pose_with_retry(bot, retries=10, delay=1.0):
+    for i in range(retries):
+        pose = bot.get_pose()
+        if pose and len(pose) >= 4:
+            return pose[0:4]
+        print(f"  ⏳ 로봇 포즈 대기 중... ({i+1}/{retries})")
+        time.sleep(delay)
+    raise RuntimeError("❌ 로봇 포즈를 읽을 수 없습니다. 로봇 상태를 확인하세요.")
 
 # ── 2. 작업 함수들 ────────────────────────────────
 def enqueue_trajectory(bot, start_x, start_y, start_z, start_r):
@@ -173,8 +183,7 @@ def main():
     print("\n🚀 Orchestrator 시작")
     bot = setup_robot()
 
-    current_pose = bot.get_pose()[0:4]
-    cx, cy, cz, cr = current_pose
+    cx, cy, cz, cr = get_pose_with_retry(bot)
     print(f"📍 현재 로봇 위치 기준점: ({cx:.2f}, {cy:.2f}, {cz:.2f})")
 
     for cycle_count in range(1, 81):

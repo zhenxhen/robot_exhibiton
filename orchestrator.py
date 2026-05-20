@@ -151,7 +151,7 @@ def analyze(model, image_path: str) -> str:
     # 전송 전 리사이즈 (최대 720px, 비율 유지) → 업로드 용량 대폭 감소
     img.thumbnail((720, 1280), Image.LANCZOS)
     response = model.models.generate_content(
-        model="gemini-2.0-flash-lite",
+        model="gemini-2.0-flash",
         contents=[ANALYSIS_PROMPT, img],
         config=types.GenerateContentConfig(max_output_tokens=600, temperature=0.2)
     )

@@ -100,9 +100,12 @@ def setup_robot():
         print("❌ 로봇이 연결되지 않았습니다.")
         sys.exit(1)
     print('🤖 로봇 연결됨')
-    bot.set_continous_trajectory_real_time_params(50, 150, 10)
+    time.sleep(1)
+    bot.clear_alarms_state()
     bot.stop_queue()
     bot.clear_queue()
+    bot.set_continous_trajectory_real_time_params(50, 150, 10)
+    time.sleep(1)
     return bot
 
 # ── 2. 작업 함수들 ────────────────────────────────
@@ -175,11 +178,11 @@ def main():
     bot = setup_robot()
     
     # 로봇 초기 위치 획득 (현재 위치를 기준으로 원을 그림)
-    for _ in range(10):
+    for _ in range(20):
         current_pose = bot.get_pose()
         if len(current_pose) >= 4:
             break
-        time.sleep(0.5)
+        time.sleep(1)
     else:
         raise RuntimeError("❌ 로봇 포즈를 읽을 수 없습니다.")
     cx, cy, cz, cr = current_pose[0:4]

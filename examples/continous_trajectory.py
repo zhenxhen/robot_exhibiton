@@ -67,16 +67,13 @@ while True:
         
         # 5번째 파라미터는 속도(velocity)입니다. 그리는 속도를 높이기 위해 150으로 설정합니다.
         res = bot.set_continous_trajectory_command(1, x, y, z, 150)
-        if res is not None:
+        if res:
             last_index = res[0] if isinstance(res, (list, tuple)) else res
-            
-    # 한 사이클(좌표들)을 모두 큐에 넣은 후, 마지막으로 대기(wait) 명령을 하나 더 추가합니다.
-    # 로봇이 큐에 쌓인 명령(한 사이클)을 모두 수행할 때까지 파이썬 스크립트 대기
+
     while True:
         curr = bot.get_current_queue_index()
-        if curr is not None:
+        if curr:
             curr_val = curr[0] if isinstance(curr, (list, tuple)) else curr
-            # 현재 큐 인덱스가 마지막 궤적 인덱스와 같아지거나 커지면 사실상 사이클 완료
             if curr_val >= last_index:
                 break
         time.sleep(0.1)

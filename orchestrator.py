@@ -124,16 +124,15 @@ def enqueue_trajectory(bot, start_x, start_y, start_z, start_r):
         z = start_z + RADIUS * math.sin(theta)
         
         res = bot.set_continous_trajectory_command(1, x, y, z, VELOCITY)
-        if res is not None:
+        if res:
             last_index = res[0] if isinstance(res, (list, tuple)) else res
             
     return last_index
 
 def wait_for_robot(bot, target_index):
-    # 로봇의 큐 인덱스가 우리가 마지막으로 입력한 target_index보다 커질 때까지 대기
     while True:
         curr = bot.get_current_queue_index()
-        if curr is not None:
+        if curr:
             curr_val = curr[0] if isinstance(curr, (list, tuple)) else curr
             if curr_val >= target_index:
                 break

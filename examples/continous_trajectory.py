@@ -1,12 +1,20 @@
 import sys
 import os
+import glob
 sys.path.insert(0, os.path.abspath('.'))
 
 import math
 
 from lib.interface import Interface
 
-bot = Interface('/dev/cu.usbserial-120')
+def find_robot_port():
+    ports = glob.glob('/dev/cu.usbserial-*') + glob.glob('/dev/ttyUSB*') + glob.glob('/dev/ttyACM*')
+    if not ports:
+        raise RuntimeError("❌ usbserial 포트를 찾을 수 없습니다. 로봇 케이블을 확인하세요.")
+    print(f"🔌 로봇 포트 자동 감지: {ports[0]}")
+    return ports[0]
+
+bot = Interface(find_robot_port())
 
 print('Bot status:', 'connected' if bot.connected() else 'not connected')
 

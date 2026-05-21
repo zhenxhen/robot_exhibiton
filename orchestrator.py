@@ -249,8 +249,13 @@ def main():
             time.sleep(2)
 
         if cycle_count >= 80:
-            print("\n🔁 80 사이클 완료 - trajectory 모드로 전환합니다.")
-            os.execv(sys.executable, [sys.executable, "examples/continous_trajectory.py"])
+            print("\n🔁 80 사이클 완료 - 단순 반복 모드로 전환합니다.")
+            while True:
+                bot.stop_queue()
+                bot.clear_queue()
+                last_idx = enqueue_trajectory(bot, cx, cy, cz, cr)
+                bot.start_queue()
+                wait_for_robot(bot, last_idx)
 
 if __name__ == "__main__":
     main()
